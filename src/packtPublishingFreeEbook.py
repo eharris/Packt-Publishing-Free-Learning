@@ -58,7 +58,8 @@ class ConfigurationModel(object):
         self.configuration = configparser.ConfigParser()
         if not self.configuration.read(self.cfg_file_path):
             raise configparser.Error('{} file not found'.format(self.cfg_file_path))
-        self.anticaptcha_clientkey = self.configuration.get("ANTICAPTCHA_DATA", 'key')
+        self.anticaptcha_clientkey = self.configuration.get("ANTICAPTCHA_DATA", 'key')\
+            if self.configuration.has_option("ANTICAPTCHA_DATA", 'key') else None
         self.my_packt_email, self.my_packt_password = self._get_config_login_data()
         self.download_folder_path, self.download_formats = self._get_config_download_data()
         if not os.path.exists(self.download_folder_path):
@@ -141,6 +142,16 @@ class PacktPublishingFreeEbook(object):
         offer_id = offer_data.get('id')
         product_id = offer_data.get('productId')
 
+        product_response = api_client.get(PACKT_PRODUCT_SUMMARY_URL.format(product_id=product_id))
+        self.book_data = {'id': product_id, 'title': product_response.json()['title']}\
+            if product_response.status_code == 200 else None
+
+        # Added to just print the title of the current free book offer
+        print(product_response.json()['title'])
+
+        if self.cfg.anticaptcha_clientkey is None:
+            return
+
         user_response = api_client.get(PACKT_API_USER_URL)
         [user_data] = user_response.json().get('data')
         user_id = user_data.get('id')
@@ -149,10 +160,6 @@ class PacktPublishingFreeEbook(object):
             PACKT_API_FREE_LEARNING_CLAIM_URL.format(user_id=user_id, offer_id=offer_id),
             json={'recaptcha': self.solve_packt_recapcha()}
         )
-
-        product_response = api_client.get(PACKT_PRODUCT_SUMMARY_URL.format(product_id=product_id))
-        self.book_data = {'id': product_id, 'title': product_response.json()['title']}\
-            if product_response.status_code == 200 else None
 
         if claim_response.status_code == 200:
             logger.info('A new Packt Free Learning ebook "{}" has been grabbed!'.format(self.book_data['title']))
@@ -185,6 +192,13 @@ class PacktPublishingFreeEbook(object):
         is_interactive = sys.stdout.isatty()
         for book in my_books_data:
             download_urls = get_product_download_urls(book['id'])
+
+            if download_urls is None:
+                exit()
+            # Hack test to only download one book
+            #if "ASP" not in book['title']:
+            #    continue
+
             for format, download_url in download_urls.items():
                 if format in formats and not (format == 'code' and 'video' in download_urls and 'video' in formats):
                     file_extention = 'zip' if format in ('video', 'code') else format
