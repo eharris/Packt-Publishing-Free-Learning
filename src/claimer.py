@@ -75,13 +75,19 @@ def claim_product(api_client, recaptcha_solution):
     offer_id = offer_data.get('id')
     product_id = offer_data.get('productId')
 
-    user_response = api_client.get(PACKT_API_USER_URL)
-    [user_data] = user_response.json().get('data')
-    user_id = user_data.get('id')
-
     product_response = api_client.get(PACKT_PRODUCT_SUMMARY_URL.format(product_id=product_id))
     product_data = {'id': product_id, 'title': product_response.json()['title']}\
         if product_response.status_code == 200 else None
+
+    # Added to just print the title of the current free book offer
+    print(product_response.json()['title'])
+
+    if anticaptcha_key is None:
+        return
+
+    user_response = api_client.get(PACKT_API_USER_URL)
+    [user_data] = user_response.json().get('data')
+    user_id = user_data.get('id')
 
     if any(product_id == book['id'] for book in get_all_books_data(api_client)):
         logger.info('You have already claimed Packt Free Learning "{}" offer.'.format(product_data['title']))
