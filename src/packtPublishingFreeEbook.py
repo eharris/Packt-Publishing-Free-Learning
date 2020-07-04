@@ -53,7 +53,8 @@ def packt_cli(cfgpath, grab, grabd, dall, sgd, mail, status_mail, folder, noauth
     try:
         cfg = ConfigurationModel(config_file_path)
         product_data = None
-        recaptcha_solution = solve_recaptcha(cfg.anticaptcha_api_key, PACKT_URL, PACKT_RECAPTCHA_SITE_KEY)
+        #recaptcha_solution = solve_recaptcha(cfg.anticaptcha_api_key, PACKT_URL, PACKT_RECAPTCHA_SITE_KEY)
+        recaptcha_solution = ''
         api_client = PacktAPIClient({'recaptcha': recaptcha_solution, **cfg.packt_login_credentials})
 
         # Grab the newest book
